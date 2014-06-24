@@ -19,6 +19,8 @@ limitations under the License.
 =============================================================
 ###
 
+"use strict"
+
 class Combobox
   constructor: (element, options) ->
     @options = $.extend({}, $.fn.combobox.defaults, options)
