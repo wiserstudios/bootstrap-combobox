@@ -35,7 +35,6 @@ limitations under the License.
       this.$target = this.$container.find('input[type=hidden]');
       this.$button = this.$container.find('.dropdown-toggle');
       this.$menu = $(this.options.menu).appendTo('body');
-      this.template = this.options.template || this.template;
       this.matcher = this.options.matcher || this.matcher;
       this.sorter = this.options.sorter || this.sorter;
       this.highlighter = this.options.highlighter || this.highlighter;
@@ -48,7 +47,7 @@ limitations under the License.
 
     Combobox.prototype.setup = function() {
       var combobox;
-      combobox = $(this.template());
+      combobox = $(this.options.template);
       this.$source.before(combobox);
       this.$source.hide();
       return combobox;
@@ -172,7 +171,7 @@ limitations under the License.
       if (this.options.bsVersion === '2') {
         return '<div class="combobox-container"><input type="hidden" /> <div class="input-append"> <input type="text" autocomplete="off" /> <span class="add-on dropdown-toggle" data-dropdown="dropdown"> <span class="caret"/> <i class="icon-remove"/> </span> </div> </div>';
       } else {
-        return '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>';
+
       }
     };
 
@@ -406,7 +405,7 @@ limitations under the License.
   };
 
   $.fn.combobox.defaults = {
-    bsVersion: '3',
+    template: '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>',
     menu: '<ul class="typeahead typeahead-long dropdown-menu"></ul>',
     item: '<li><a href="#"></a></li>'
   };

@@ -104,8 +104,8 @@
 		},
 	"\/test\/unit\/bootstrap-combobox.js": {
 		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
 		"inputAbbreviatedPath": "\/test\/unit\/bootstrap-combobox.js",
 		"outputAbbreviatedPath": "\/test\/unit\/min\/bootstrap-combobox-ck.js",
 		"outputPathIsOutsideProject": 0,

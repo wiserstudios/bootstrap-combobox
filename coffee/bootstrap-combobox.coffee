@@ -30,7 +30,6 @@ class Combobox
     @$target = @$container.find('input[type=hidden]')
     @$button = @$container.find('.dropdown-toggle')
     @$menu = $(@options.menu).appendTo('body')
-    @template = @options.template || @template
     @matcher = @options.matcher || @matcher
     @sorter = @options.sorter || @sorter
     @highlighter = @options.highlighter || @highlighter
@@ -41,7 +40,7 @@ class Combobox
     @listen()
 
   setup: () ->
-    combobox = $(@template())
+    combobox = $(@options.template)
     @$source.before(combobox)
     @$source.hide()
     combobox
@@ -151,7 +150,7 @@ class Combobox
     if @options.bsVersion == '2'
       return '<div class="combobox-container"><input type="hidden" /> <div class="input-append"> <input type="text" autocomplete="off" /> <span class="add-on dropdown-toggle" data-dropdown="dropdown"> <span class="caret"/> <i class="icon-remove"/> </span> </div> </div>'
     else
-      return '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>'
+      return
 
   matcher: (item) ->
     return ~item.toLowerCase().indexOf(@query.toLowerCase())
@@ -348,7 +347,7 @@ $.fn.combobox = (option) ->
     data[option]() if typeof option == 'string'
 
 $.fn.combobox.defaults = {
-  bsVersion: '3'
+  template: '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>'
   menu: '<ul class="typeahead typeahead-long dropdown-menu"></ul>'
   item: '<li><a href="#"></a></li>'
 }
