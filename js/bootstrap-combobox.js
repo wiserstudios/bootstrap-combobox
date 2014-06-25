@@ -23,8 +23,29 @@ limitations under the License.
 
 (function() {
   "use strict";
-  var Combobox,
+  var Combobox, Option, OptionGroup,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+  Option = (function() {
+    function Option(value, text, selected) {
+      this.value = value;
+      this.text = text;
+      this.selected = selected;
+    }
+
+    return Option;
+
+  })();
+
+  OptionGroup = (function() {
+    function OptionGroup(label, options) {
+      this.label = label;
+      this.options = options;
+    }
+
+    return OptionGroup;
+
+  })();
 
   Combobox = (function() {
     function Combobox(element, options) {
@@ -67,35 +88,34 @@ limitations under the License.
       return this.$container.removeClass('combobox-disabled');
     };
 
-    Combobox.prototype.parse = function() {
-      var map, selected, selectedValue, source, that;
-      that = this;
-      map = {};
-      source = [];
-      selected = false;
-      selectedValue = '';
-      this.$source.find('option').each(function() {
-        var option;
-        option = $(this);
-        if (option.val() === '') {
-          that.options.placeholder = option.text();
-          return;
+    Combobox.prototype.parseOption = function(opt) {
+      return new Option(opt.val(), opt.text(), opt.prop('selected') && opt.val() !== '');
+    };
+
+    Combobox.prototype.parseOptionGroup = function(group) {
+      var child, options;
+      options = (function() {
+        var _i, _len, _ref, _results;
+        _ref = group.children('option');
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          child = _ref[_i];
+          _results.push(this.parseOption($(child)));
         }
-        map[option.text()] = option.val();
-        source.push(option.text());
-        if (option.prop('selected')) {
-          selected = option.text();
-          return selectedValue = option.val();
-        }
-      });
-      this.map = map;
-      if (selected) {
-        this.$element.val(selected);
-        this.$target.val(selectedValue);
-        this.$container.addClass('combobox-selected');
-        this.selected = true;
+        return _results;
+      }).call(this);
+      return new OptionGroup(group.attr('label'), options);
+    };
+
+    Combobox.prototype.parse = function(element) {
+      var child, _i, _len, _ref, _results;
+      _ref = element.children('option,optgroup');
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        _results.push($(child).is('option') ? this.parseOption($(child)) : this.parseOptionGroup($(child)));
       }
-      return source;
+      return _results;
     };
 
     Combobox.prototype.transferAttributes = function() {
@@ -110,19 +130,67 @@ limitations under the License.
       this.$element.attr('class', this.$source.attr('class'));
       this.$element.attr('tabindex', this.$source.attr('tabindex'));
       this.$source.removeAttr('tabindex');
-      if (this.$source.attr('disabled') !== void 0) {
+      if (this.$source.attr('disabled') != null) {
         return this.disable();
       }
     };
 
-    Combobox.prototype.select = function() {
-      var val;
-      val = this.$menu.find('.active').attr('data-value');
-      this.$element.val(this.updater(val)).trigger('change');
-      this.$target.val(this.map[val]).trigger('change');
-      this.$source.val(this.map[val]).trigger('change');
-      this.$container.addClass('combobox-selected');
-      this.selected = true;
+    Combobox.prototype.traverseOptions = function(items, callback) {
+      var item, option, _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = items.length; _i < _len; _i++) {
+        item = items[_i];
+        if (item instanceof Option) {
+          _results.push(callback(item));
+        } else if (item instanceof OptionGroup) {
+          _results.push((function() {
+            var _j, _len1, _ref, _results1;
+            _ref = item.options;
+            _results1 = [];
+            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+              option = _ref[_j];
+              _results1.push(callback(option));
+            }
+            return _results1;
+          })());
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
+    };
+
+    Combobox.prototype.setPlaceholder = function(items) {
+      return this.traverseOptions(items, (function(_this) {
+        return function(option) {
+          if (option.value === '') {
+            return _this.options.placeholder = option.text;
+          }
+        };
+      })(this));
+    };
+
+    Combobox.prototype.select = function(arg) {
+      switch (false) {
+        case !(arg instanceof Option):
+          this.$element.val(this.updater(arg.text)).trigger('change');
+          this.$target.val(arg.value).trigger('change');
+          this.$source.val(arg.value).trigger('change');
+          this.$container.addClass('combobox-selected');
+          this.selected = true;
+          break;
+        case !(arg instanceof Array):
+          this.traverseOptions(arg, (function(_this) {
+            return function(option) {
+              if (option.selected) {
+                return _this.select(option);
+              }
+            };
+          })(this));
+          break;
+        case !(arg == null):
+          this.select(this.$menu.find('.active').data('option'));
+      }
       return this.hide();
     };
 
@@ -151,71 +219,179 @@ limitations under the License.
 
     Combobox.prototype.lookup = function(event) {
       this.query = this.$element.val();
-      return this.process(this.source);
+      return this.process(this.items);
     };
 
     Combobox.prototype.process = function(items) {
-      var that;
-      that = this;
-      items = $.grep(items, function(item) {
-        return that.matcher(item);
-      });
-      items = this.sorter(items);
-      if (!items.length) {
-        return (this.shown ? this.hide() : this);
+      var group, groups, option, ungrouped, _i, _len;
+      ungrouped = this.sorter((function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          option = items[_i];
+          if (option instanceof Option && this.matcher(option)) {
+            _results.push(option);
+          }
+        }
+        return _results;
+      }).call(this));
+      groups = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          group = items[_i];
+          if (group instanceof OptionGroup) {
+            _results.push(new OptionGroup(group.label, group.options));
+          }
+        }
+        return _results;
+      })();
+      for (_i = 0, _len = groups.length; _i < _len; _i++) {
+        group = groups[_i];
+        group.options = this.sorter((function() {
+          var _j, _len1, _ref, _results;
+          _ref = group.options;
+          _results = [];
+          for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+            option = _ref[_j];
+            if (this.matcher(option)) {
+              _results.push(option);
+            }
+          }
+          return _results;
+        }).call(this));
       }
-      return this.render(items.slice(0, this.options.items)).show();
-    };
-
-    Combobox.prototype.template = function() {
-      if (this.options.bsVersion === '2') {
-        return '<div class="combobox-container"><input type="hidden" /> <div class="input-append"> <input type="text" autocomplete="off" /> <span class="add-on dropdown-toggle" data-dropdown="dropdown"> <span class="caret"/> <i class="icon-remove"/> </span> </div> </div>';
+      groups = (function() {
+        var _j, _len1, _results;
+        _results = [];
+        for (_j = 0, _len1 = groups.length; _j < _len1; _j++) {
+          group = groups[_j];
+          if (group.options.length > 0) {
+            _results.push(group);
+          }
+        }
+        return _results;
+      })();
+      items = ungrouped.concat(groups);
+      if (items.length === 0) {
+        if (this.shown) {
+          return this.hide;
+        }
       } else {
-
+        this.render(items);
+        return this.show();
       }
     };
 
-    Combobox.prototype.matcher = function(item) {
-      return ~item.toLowerCase().indexOf(this.query.toLowerCase());
+    Combobox.prototype.matcher = function(option) {
+      return ~option.text.toLowerCase().indexOf(this.query.toLowerCase());
     };
 
-    Combobox.prototype.sorter = function(items) {
-      var beginswith, caseInsensitive, caseSensitive, item;
+    Combobox.prototype.sorter = function(options) {
+      var beginswith, caseInsensitive, caseSensitive, option, _i, _len;
       beginswith = [];
       caseSensitive = [];
       caseInsensitive = [];
-      item;
-      while ((item = items.shift())) {
-        if (!item.toLowerCase().indexOf(this.query.toLowerCase())) {
-          beginswith.push(item);
-        } else if (~item.indexOf(this.query)) {
-          caseSensitive.push(item);
+      for (_i = 0, _len = options.length; _i < _len; _i++) {
+        option = options[_i];
+        if (!option.text.toLowerCase().indexOf(this.query.toLowerCase())) {
+          beginswith.push(option);
+        } else if (~option.text.indexOf(this.query)) {
+          caseSensitive.push(option);
         } else {
-          caseInsensitive.push(item);
+          caseInsensitive.push(option);
         }
       }
       return beginswith.concat(caseSensitive, caseInsensitive);
     };
 
-    Combobox.prototype.highlighter = function(item) {
+    Combobox.prototype.highlighter = function(option) {
       var query;
       query = this.query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, '\\$&');
-      return item.replace(new RegExp('(' + query + ')', 'ig'), function($1, match) {
+      return option.text.replace(new RegExp('(' + query + ')', 'ig'), function($1, match) {
         return '<strong>' + match + '</strong>';
       });
     };
 
+    Combobox.prototype.renderOption = function(option) {
+      var item;
+      item = $(this.options.item);
+      item.data('option', option);
+      item.find('a').html(this.highlighter(option));
+      return item;
+    };
+
+    Combobox.prototype.renderOptionGroup = function(group) {
+      var header, option, options;
+      header = $(this.options.item);
+      header.addClass('dropdown-header');
+      header.html(group.label);
+      options = (function() {
+        var _i, _len, _ref, _results;
+        _ref = group.options;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          option = _ref[_i];
+          if (option.value !== '') {
+            _results.push(this.renderOption(option));
+          }
+        }
+        return _results;
+      }).call(this);
+      return [header].concat(options);
+    };
+
     Combobox.prototype.render = function(items) {
-      var that;
-      that = this;
-      items = $(items).map(function(i, item) {
-        i = $(that.options.item).attr('data-value', item);
-        i.find('a').html(that.highlighter(item));
-        return i[0];
-      });
-      items.first().addClass('active');
-      this.$menu.html(items);
-      return this;
+      var divider, element, group, groups, option, ungrouped, _i, _len, _results;
+      ungrouped = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          option = items[_i];
+          if (option instanceof Option && option.value !== '') {
+            _results.push(this.renderOption(option));
+          }
+        }
+        return _results;
+      }).call(this);
+      groups = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          group = items[_i];
+          if (group instanceof OptionGroup) {
+            _results.push(this.renderOptionGroup(group));
+          }
+        }
+        return _results;
+      }).call(this);
+      if (ungrouped.length > 0) {
+        ungrouped[0].addClass('active');
+      } else {
+        groups[0][1].addClass('active');
+      }
+      divider = $(this.options.item);
+      divider.addClass('divider');
+      divider.html('');
+      this.$menu.html('');
+      this.$menu.append(ungrouped);
+      _results = [];
+      for (_i = 0, _len = groups.length; _i < _len; _i++) {
+        group = groups[_i];
+        if (this.$menu.children().length > 0) {
+          this.$menu.append(divider);
+        }
+        _results.push((function() {
+          var _j, _len1, _results1;
+          _results1 = [];
+          for (_j = 0, _len1 = group.length; _j < _len1; _j++) {
+            element = group[_j];
+            _results1.push(this.$menu.append(element));
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
     };
 
     Combobox.prototype.next = function(event) {
@@ -271,8 +447,9 @@ limitations under the License.
     };
 
     Combobox.prototype.refresh = function() {
-      this.source = this.parse();
-      return this.options.items = this.source.length;
+      this.items = this.parse(this.$source);
+      this.setPlaceholder(this.items);
+      return this.select(this.items);
     };
 
     Combobox.prototype.listen = function() {
@@ -352,8 +529,7 @@ limitations under the License.
     };
 
     Combobox.prototype.blur = function(e) {
-      var that, val;
-      that = this;
+      var val;
       this.focused = false;
       val = this.$element.val();
       if (!this.selected && val !== '') {
@@ -362,9 +538,11 @@ limitations under the License.
         this.$target.val('').trigger('change');
       }
       if (!this.mousedover && this.shown) {
-        return setTimeout((function() {
-          return that.hide();
-        }), 200);
+        return setTimeout(((function(_this) {
+          return function() {
+            return _this.hide();
+          };
+        })(this)), 200);
       }
     };
 
@@ -413,3 +591,6 @@ limitations under the License.
   $.fn.combobox.Constructor = Combobox;
 
 }).call(this);
+
+
+//# sourceMappingURL=bootstrap-combobox.map

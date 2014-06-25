@@ -266,13 +266,51 @@
 
   test("should respect disabled attribute", function() {
     var $input, $select, combobox;
-    $select = $('<select title="A title" disabled><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>');
+    $select = $('<select disabled><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>');
     $input = $select.combobox().data('combobox').$element;
     combobox = $select.data('combobox');
     equal($input.prop('disabled'), true);
     equal(combobox.$button.attr('disabled'), "disabled");
     equal(combobox.disabled, true);
     return combobox.$menu.remove();
+  });
+
+  test("should show dropdown headers and dividers for optgroups", function() {
+    var $select, combobox, divider, headers, menu;
+    $select = $('<select><option></option><optgroup label="a"><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></optgroup><optgroup label="b"><option value="ba">ba</option><option value="bb">bb</option><option value="bc">bc</option></optgroup></select>').appendTo('body');
+    combobox = $select.combobox().data('combobox');
+    menu = combobox.$menu;
+    combobox.lookup();
+    ok(menu.is(":visible"), 'menu is visible');
+    equal(menu.find('li').length, 9, 'has 9 items in menu');
+    headers = menu.find('li.dropdown-header');
+    equal(headers.length, 2, 'has 2 headers');
+    equal(headers.eq(0).html(), 'a', 'has header for group a');
+    equal(menu.find('li').index(headers.eq(0)), 0, 'has header for group a in correct position');
+    equal(headers.eq(1).html(), 'b', 'has header for group b');
+    equal(menu.find('li').index(headers.eq(1)), 5, 'has header for group b in correct position');
+    divider = menu.find('li.divider');
+    equal(divider.length, 1, 'has 1 divider');
+    equal(menu.find('li').index(divider), 4, 'has divider between groups a and b');
+    combobox.$menu.remove();
+    $select.remove();
+    return combobox.$container.remove();
+  });
+
+  test("should only show dropdown headers for optgroups with matches", function() {
+    var $select, combobox, menu;
+    $select = $('<select><option></option><optgroup label="a"><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></optgroup><optgroup label="b"><option value="ba">ba</option><option value="bb">bb</option><option value="bc">bc</option></optgroup></select>').appendTo('body');
+    combobox = $select.combobox().data('combobox');
+    menu = combobox.$menu;
+    combobox.$element.val('aa');
+    combobox.lookup();
+    ok(menu.is(":visible"), 'menu is visible');
+    equal(menu.find('li').length, 2, 'has 2 items in menu');
+    equal(menu.find('li.dropdown-header').length, 1, 'has 1 header');
+    equal(menu.find('li.divider').length, 0, 'has 0 dividers');
+    combobox.$menu.remove();
+    $select.remove();
+    return combobox.$container.remove();
   });
 
 }).call(this);

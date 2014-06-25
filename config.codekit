@@ -3,7 +3,7 @@
 "creatorBuild": "17018",
 "files": {
 	"\/coffee\/bootstrap-combobox.coffee": {
-		"createSourceMap": 0,
+		"createSourceMap": 1,
 		"fileType": 32,
 		"ignore": 0,
 		"ignoreWasSetByUser": 1,

@@ -21,6 +21,12 @@ limitations under the License.
 
 "use strict"
 
+class Option
+  constructor: (@value, @text, @selected) ->
+
+class OptionGroup
+  constructor: (@label, @options) ->
+
 class Combobox
   constructor: (element, options) ->
     @options = $.extend({}, $.fn.combobox.defaults, options)
@@ -57,29 +63,15 @@ class Combobox
     @disabled = false
     @$container.removeClass('combobox-disabled')
 
-  parse: () ->
-    that = this
-    map = {}
-    source = []
-    selected = false
-    selectedValue = ''
-    @$source.find('option').each () ->
-      option = $(this)
-      if option.val() is ''
-        that.options.placeholder = option.text()
-        return
-      map[option.text()] = option.val()
-      source.push(option.text())
-      if option.prop('selected')
-        selected = option.text()
-        selectedValue = option.val()
-    @map = map
-    if selected
-      @$element.val(selected)
-      @$target.val(selectedValue)
-      @$container.addClass('combobox-selected')
-      @selected = true
-    source
+  parseOption: (opt) ->
+    new Option opt.val(), opt.text(), opt.prop('selected') and opt.val() isnt ''
+
+  parseOptionGroup: (group) ->
+    options = (@parseOption $(child) for child in group.children('option'))
+    new OptionGroup group.attr('label'), options
+
+  parse: (element) ->
+    (if $(child).is 'option' then @parseOption $(child) else @parseOptionGroup $(child)) for child in element.children('option,optgroup')
 
   transferAttributes: () ->
     @options.placeholder = @$source.attr('data-placeholder') || @options.placeholder
@@ -93,20 +85,38 @@ class Combobox
     @$element.attr('class', @$source.attr('class'))
     @$element.attr('tabindex', @$source.attr('tabindex'))
     @$source.removeAttr('tabindex')
-    if (@$source.attr('disabled') isnt undefined)
+    if @$source.attr('disabled')?
       @disable()
 
-  select: () ->
-    val = @$menu.find('.active').attr('data-value')
-    @$element.val(@updater(val)).trigger('change')
-    @$target.val(@map[val]).trigger('change')
-    @$source.val(@map[val]).trigger('change')
-    @$container.addClass('combobox-selected')
-    @selected = true
-    return @hide()
+  traverseOptions: (items, callback) ->
+    for item in items
+      if item instanceof Option
+        callback item
+      else if item instanceof OptionGroup
+        callback option for option in item.options
+
+  setPlaceholder: (items) ->
+    @traverseOptions items, (option) =>
+      @options.placeholder = option.text if option.value is ''
+
+  select: (arg) ->
+    switch
+      when arg instanceof Option
+        @$element.val(@updater(arg.text)).trigger('change')
+        @$target.val(arg.value).trigger('change')
+        @$source.val(arg.value).trigger('change')
+        @$container.addClass('combobox-selected')
+        @selected = true
+      when arg instanceof Array
+        @traverseOptions arg, (option) =>
+          @select option if option.selected
+      when not arg?
+        @select(@$menu.find('.active').data('option'))
+
+    @hide()
 
   updater: (item) ->
-    return item
+    item
 
   show: () ->
     pos = $.extend({}, @$element.position(), {
@@ -127,66 +137,79 @@ class Combobox
   hide: () ->
     @$menu.hide()
     @shown = false
-    return this
+    this
 
   lookup: (event) ->
     @query = @$element.val()
-    return @process(@source)
+    @process(@items)
 
   process: (items) ->
-    that = this
+    ungrouped = @sorter (option for option in items when option instanceof Option and @matcher option)
+    groups = (new OptionGroup group.label, group.options for group in items when group instanceof OptionGroup)
+    for group in groups
+      group.options = @sorter (option for option in group.options when @matcher option)
+    groups = (group for group in groups when group.options.length > 0)
 
-    items = $.grep items, (item) ->
-      that.matcher(item)
+    items = ungrouped.concat groups
 
-    items = @sorter(items)
-
-    if !items.length
-      return (if @shown then @hide() else this)
-
-    return @render(items.slice(0, @options.items)).show()
-
-  template: () ->
-    if @options.bsVersion == '2'
-      return '<div class="combobox-container"><input type="hidden" /> <div class="input-append"> <input type="text" autocomplete="off" /> <span class="add-on dropdown-toggle" data-dropdown="dropdown"> <span class="caret"/> <i class="icon-remove"/> </span> </div> </div>'
+    if items.length is 0
+      @hide if @shown
     else
-      return
+      @render items
+      @show()
 
-  matcher: (item) ->
-    return ~item.toLowerCase().indexOf(@query.toLowerCase())
+  matcher: (option) ->
+    ~option.text.toLowerCase().indexOf(@query.toLowerCase())
 
-  sorter: (items) ->
+  sorter: (options) ->
     beginswith = []
     caseSensitive = []
     caseInsensitive = []
-    item
 
-    while (item = items.shift())
-      if !item.toLowerCase().indexOf(@query.toLowerCase())
-        beginswith.push(item)
-      else if ~item.indexOf(@query)
-        caseSensitive.push(item)
+    for option in options
+      if not option.text.toLowerCase().indexOf(@query.toLowerCase())
+        beginswith.push(option)
+      else if ~option.text.indexOf(@query)
+        caseSensitive.push(option)
       else
-        caseInsensitive.push(item)
+        caseInsensitive.push(option)
 
-    return beginswith.concat(caseSensitive, caseInsensitive)
+    beginswith.concat(caseSensitive, caseInsensitive)
 
-  highlighter: (item) ->
+  highlighter: (option) ->
     query = @query.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, '\\$&')
-    item.replace new RegExp('(' + query + ')', 'ig'), ($1, match) ->
+    option.text.replace new RegExp('(' + query + ')', 'ig'), ($1, match) ->
       '<strong>' + match + '</strong>'
 
+  renderOption: (option) ->
+    item = $(@options.item)
+    item.data('option', option)
+    item.find('a').html(@highlighter option)
+    item
+
+  renderOptionGroup: (group) ->
+    header = $(@options.item)
+    header.addClass('dropdown-header')
+    header.html(group.label)
+
+    options = (@renderOption option for option in group.options when option.value isnt '')
+    [header].concat(options)
+
   render: (items) ->
-    that = this
+    ungrouped = (@renderOption option for option in items when option instanceof Option and option.value isnt '')
+    groups = (@renderOptionGroup group for group in items when group instanceof OptionGroup)
 
-    items = $(items).map (i, item) ->
-      i = $(that.options.item).attr('data-value', item)
-      i.find('a').html(that.highlighter(item))
-      i[0]
+    if ungrouped.length > 0 then ungrouped[0].addClass('active') else groups[0][1].addClass('active')
 
-    items.first().addClass('active')
-    @$menu.html(items)
-    return this
+    divider = $(@options.item)
+    divider.addClass('divider')
+    divider.html('')
+
+    @$menu.html('')
+    @$menu.append(ungrouped)
+    for group in groups
+      @$menu.append(divider) if @$menu.children().length > 0
+      @$menu.append(element) for element in group
 
   next: (event) ->
     active = @$menu.find('.active').removeClass('active')
@@ -207,7 +230,7 @@ class Combobox
     prev.addClass('active')
 
   toggle: () ->
-    if !@disabled
+    if not @disabled
       if @$container.hasClass('combobox-selected')
         @clearTarget()
         @triggerChange()
@@ -232,8 +255,9 @@ class Combobox
     @$source.trigger('change')
 
   refresh: () ->
-    @source = @parse()
-    @options.items = @source.length
+    @items = @parse(@$source)
+    @setPlaceholder(@items)
+    @select(@items)
 
   listen: () ->
     @$element
@@ -313,7 +337,6 @@ class Combobox
     @focused = true
 
   blur: (e) ->
-    that = this
     @focused = false
     val = @$element.val()
     if not @selected and val isnt ''
@@ -321,7 +344,7 @@ class Combobox
       @$source.val('').trigger('change')
       @$target.val('').trigger('change')
     if not @mousedover and @shown
-      setTimeout (() -> that.hide()), 200
+      setTimeout (() => @hide()), 200
 
   click: (e) ->
     e.stopPropagation()
