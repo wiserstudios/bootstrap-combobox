@@ -10,16 +10,16 @@ test "should return element", () ->
 test "should build combobox from a select", () ->
   $select = $('<select />')
   $select.combobox()
-  ok($select.data('combobox').$source, 'has a source select')
-  ok($select.data('combobox').$container, 'has a container')
-  ok($select.data('combobox').$element, 'has a input element')
-  ok($select.data('combobox').$button, 'has a button')
-  ok($select.data('combobox').$target, 'has a target')
+  ok($select.data('bs.combobox').$element, 'has a source select')
+  ok($select.data('bs.combobox').$container, 'has a container')
+  ok($select.data('bs.combobox').$input, 'has a input element')
+  ok($select.data('bs.combobox').$button, 'has a button')
+  ok($select.data('bs.combobox').$hidden, 'has a target')
 
 test "should listen to an input", () ->
   $select = $('<select />')
-  combobox = $select.combobox().data('combobox')
-  $input = combobox.$element
+  combobox = $select.combobox().data('bs.combobox')
+  $input = combobox.$input
   ok($._data($input[0], 'events').blur, 'has a blur event')
   ok($._data($input[0], 'events').keypress, 'has a keypress event')
   ok($._data($input[0], 'events').keyup, 'has a keyup event')
@@ -32,24 +32,24 @@ test "should listen to an input", () ->
 
 test "should listen to an button", () ->
   $select = $('<select />')
-  $button = $select.combobox().data('combobox').$button
+  $button = $select.combobox().data('bs.combobox').$button
   ok($._data($button[0], 'events').click, 'has a click event')
 
 test "should create a menu", () ->
   $select = $('<select />')
-  ok($select.combobox().data('combobox').$menu, 'has a menu')
+  ok($select.combobox().data('bs.combobox').$menu, 'has a menu')
 
 test "should listen to the menu", () ->
   $select = $('<select />')
-  $menu = $select.combobox().data('combobox').$menu
+  $menu = $select.combobox().data('bs.combobox').$menu
 
   ok($._data($menu[0], 'events').mouseover, 'has a mouseover(pseudo: mouseenter)')
   ok($._data($menu[0], 'events').click, 'has a click')
 
 test "should show menu when query entered", () ->
   $select = $('<select><option></option><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></select>').appendTo('body')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   $input.val('a')
   combobox.lookup()
@@ -65,8 +65,8 @@ test "should show menu when query entered", () ->
 test "should hide menu when query entered", () ->
   stop()
   $select = $('<select><option></option><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></select>').appendTo('body')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   $input.val('a')
   combobox.lookup()
@@ -88,8 +88,8 @@ test "should hide menu when query entered", () ->
 
 test "should set next item when down arrow is pressed", () ->
   $select = $('<select><option></option><option>aa</option><option>ab</option><option>ac</option></select>').appendTo('body')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   $input.val('a')
   combobox.lookup()
@@ -121,10 +121,10 @@ test "should set next item when down arrow is pressed", () ->
 
 test "should set input and select value to selected item", () ->
   $select = $('<select><option></option><option>aa</option><option>ab</option><option>ac</option></select>').appendTo('body')
-  combobox = $select.combobox().data('combobox')
-  $input = combobox.$element
-  $source = combobox.$source
-  $target = combobox.$target
+  combobox = $select.combobox().data('bs.combobox')
+  $input = combobox.$input
+  $element = combobox.$element
+  $hidden = combobox.$hidden
 
 
   $input.val('a')
@@ -133,8 +133,8 @@ test "should set input and select value to selected item", () ->
   $(combobox.$menu.find('li')[2]).mouseover().click()
 
   equal($input.val(), 'ac', 'input value was correctly set')
-  equal($source.val(), 'ac', 'select value was correctly set')
-  equal($target.val(), 'ac', 'hidden field value was correctly set')
+  equal($element.val(), 'ac', 'select value was correctly set')
+  equal($hidden.val(), 'ac', 'hidden field value was correctly set')
   ok(!combobox.$menu.is(':visible'), 'the menu was hidden')
 
   combobox.$menu.remove()
@@ -143,8 +143,8 @@ test "should set input and select value to selected item", () ->
 
 test "should show menu when no item is selected and button is clicked", () ->
   $select = $('<select><option></option><option>aa</option><option>ab</option><option>ac</option></select>').appendTo('body')
-  $button = $select.combobox().data('combobox').$button
-  combobox = $select.data('combobox')
+  $button = $select.combobox().data('bs.combobox').$button
+  combobox = $select.data('bs.combobox')
 
   $button.click()
 
@@ -158,8 +158,8 @@ test "should show menu when no item is selected and button is clicked", () ->
 
 test "should add class to container when an item is selected", () ->
   $select = $('<select><option></option><option>aa</option><option>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   $input.val('a')
   combobox.lookup()
@@ -172,10 +172,10 @@ test "should add class to container when an item is selected", () ->
 
 test "should clear and focus input and select and remove class from container when button is clicked when item is selected", () ->
   $select = $('<select><option></option><option>aa</option><option>ab</option><option>ac</option></select>')
-  combobox = $select.combobox().data('combobox')
-  $input = combobox.$element
-  $source = combobox.$source
-  $target = combobox.$target
+  combobox = $select.combobox().data('bs.combobox')
+  $input = combobox.$input
+  $element = combobox.$element
+  $hidden = combobox.$hidden
 
   $input.val('a')
   combobox.lookup()
@@ -183,8 +183,8 @@ test "should clear and focus input and select and remove class from container wh
   $(combobox.$menu.find('li')[2]).mouseover().click()
 
   equal($input.val(), 'ac', 'input value was correctly set')
-  equal($source.val(), 'ac', 'select value was correctly set')
-  equal($target.val(), 'ac', 'hidden field value was correctly set')
+  equal($element.val(), 'ac', 'select value was correctly set')
+  equal($hidden.val(), 'ac', 'hidden field value was correctly set')
 
   combobox.$button.mouseover().click()
 
@@ -196,18 +196,18 @@ test "should clear and focus input and select and remove class from container wh
 
 test "should set as selected if select was selected before load", () ->
   $select = $('<select><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  $target = $select.combobox().data('combobox').$target
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  $hidden = $select.combobox().data('bs.combobox').$hidden
+  combobox = $select.data('bs.combobox')
 
   equal($input.val(), 'ab', 'input value was correctly set')
-  equal($target.val(), 'ab', 'hidden input value was correctly set')
+  equal($hidden.val(), 'ab', 'hidden input value was correctly set')
   equal($select.val(), 'ab', 'select value was correctly set')
 
 test "should clear input on blur when value does not exist", () ->
   $select = $('<select><option>aa</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   $input.val('DOES NOT EXIST')
   $input.trigger('keyup')
@@ -220,8 +220,8 @@ test "should clear input on blur when value does not exist", () ->
 
 test "should set placeholder text on the input if specified text of no value option", () ->
   $select = $('<select><option value="">Pick One</option><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('placeholder'), 'Pick One', 'input value was correctly set')
 
@@ -229,8 +229,8 @@ test "should set placeholder text on the input if specified text of no value opt
 
 test "should set placeholder text on the input if specified as an data attribute", () ->
   $select = $('<select data-placeholder="Type something..."><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('placeholder'), 'Type something...', 'input value was correctly set')
 
@@ -238,8 +238,8 @@ test "should set placeholder text on the input if specified as an data attribute
 
 test "should set required attribute the input if specified on the select", () ->
   $select = $('<select required="required"><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('required'), 'required', 'required was correctly set')
 
@@ -247,8 +247,8 @@ test "should set required attribute the input if specified on the select", () ->
 
 test "should copy classes to the input if specified on the select", () ->
   $select = $('<select class="input-small"><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('class'), 'input-small', 'class was correctly set')
 
@@ -256,8 +256,8 @@ test "should copy classes to the input if specified on the select", () ->
 
 test "should copy rel attribute to the input if specified on the select", () ->
   $select = $('<select rel="tooltip"><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('rel'), 'tooltip', 'rel was correctly set')
 
@@ -265,8 +265,8 @@ test "should copy rel attribute to the input if specified on the select", () ->
 
 test "should copy title attribute to the input if specified on the select", () ->
   $select = $('<select title="A title"><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.attr('title'), 'A title', 'title was correctly set')
 
@@ -274,8 +274,8 @@ test "should copy title attribute to the input if specified on the select", () -
 
 test "should respect disabled attribute", () ->
   $select = $('<select disabled><option></option><option>aa</option><option selected>ab</option><option>ac</option></select>')
-  $input = $select.combobox().data('combobox').$element
-  combobox = $select.data('combobox')
+  $input = $select.combobox().data('bs.combobox').$input
+  combobox = $select.data('bs.combobox')
 
   equal($input.prop('disabled'), true)
   equal(combobox.$button.attr('disabled'), "disabled")
@@ -285,7 +285,7 @@ test "should respect disabled attribute", () ->
 
 test "should show dropdown headers and dividers for optgroups", () ->
   $select = $('<select><option></option><optgroup label="a"><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></optgroup><optgroup label="b"><option value="ba">ba</option><option value="bb">bb</option><option value="bc">bc</option></optgroup></select>').appendTo('body')
-  combobox = $select.combobox().data('combobox')
+  combobox = $select.combobox().data('bs.combobox')
   menu = combobox.$menu
 
   combobox.lookup()
@@ -312,10 +312,10 @@ test "should show dropdown headers and dividers for optgroups", () ->
 
 test "should only show dropdown headers for optgroups with matches", () ->
   $select = $('<select><option></option><optgroup label="a"><option value="aa">aa</option><option value="ab">ab</option><option value="ac">ac</option></optgroup><optgroup label="b"><option value="ba">ba</option><option value="bb">bb</option><option value="bc">bc</option></optgroup></select>').appendTo('body')
-  combobox = $select.combobox().data('combobox')
+  combobox = $select.combobox().data('bs.combobox')
   menu = combobox.$menu
 
-  combobox.$element.val('aa')
+  combobox.$input.val('aa')
   combobox.lookup()
 
   ok menu.is(":visible"), 'menu is visible'
