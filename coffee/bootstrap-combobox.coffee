@@ -39,27 +39,21 @@ class OptionGroup
 class Combobox
   @VERSION: 2.0
   @DEFAULTS: {
-    template: '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>'
     menu: '<ul class="typeahead typeahead-long dropdown-menu"></ul>'
     item: '<li><a href="#"></a></li>'
   }
 
   constructor: (element, options) ->
     @options = $.extend({}, Combobox.DEFAULTS, options)
-    @$body = $(document.body)
     @$element = $(element)
-    @$container = @createContainer(@$element)
-    @$input = @$container.find('input[type=text]')
-    @$hidden = @$container.find('input[type=hidden]')
-    @$button = @$container.find('.dropdown-toggle')
-    @$menu = $(@options.menu).appendTo(@$body)
+    @$input = @element.find('input[type=text]')
+    @$button = @element.find('[data-toggle="combobox"]')
+    @$menu = $(@options.menu).appendTo(@$element)
     @matcher = @options.matcher || @matcher
     @sorter = @options.sorter || @sorter
     @highlighter = @options.highlighter || @highlighter
     @shown = false
     @selected = false
-    @refresh()
-    @transferAttributes()
     @listen()
 
   # PUBLIC API METHODS
@@ -94,7 +88,6 @@ class Combobox
     @shown = true
     @$container.trigger(e = $.Event 'shown.bs.combobox')
 
-
   hide: () ->
     @$container.trigger(e = $.Event 'hide.bs.combobox')
     return if e.isDefaultPrevented()
@@ -102,21 +95,11 @@ class Combobox
     @shown = false
     @$container.trigger(e = $.Event 'hidden.bs.combobox')
 
-
   toggle: () ->
     if not @disabled
       @hide() if @shown
       @lookup() if not @shown and not @selected
       @clear() if @selected
-
-  refresh: () ->
-    @$container.trigger(e = $.Event 'refresh.bs.combobox')
-    return if e.isDefaultPrevented()
-    @items = @parse(@$element)
-    @setPlaceholder(@items)
-    @select(@items)
-    @$container.trigger(e = $.Event 'refreshed.bs.combobox')
-
 
   select: (arg) ->
     @$container.trigger(e = $.Event 'select.bs.combobox')
@@ -125,8 +108,6 @@ class Combobox
       when arg instanceof Option
         @$container.addClass('combobox-selected')
         @$input.val(arg.text).trigger('change')
-        @$hidden.val(arg.value).trigger('change')
-        @$element.val(arg.value).trigger('change')
         @selected = true
         @$container.trigger(e = $.Event 'selected.bs.combobox')
       when arg instanceof Array
@@ -151,51 +132,8 @@ class Combobox
   # PRIVATE METHODS
   # ===============
 
-  createContainer: (element) ->
-    combobox = $(@options.template)
-    element.before(combobox)
-    element.hide()
-    combobox
-
-  transferAttributes: () ->
-    @options.placeholder = @$element.attr('data-placeholder') || @options.placeholder
-    @$input.attr('placeholder', @options.placeholder)
-    @$hidden.prop('name', @$element.prop('name'))
-    @$hidden.val(@$element.val())
-    @$element.removeAttr('name')  # Remove from source otherwise form will pass parameter twice.
-    @$input.attr('required', @$element.attr('required'))
-    @$input.attr('rel', @$element.attr('rel'))
-    @$input.attr('title', @$element.attr('title'))
-    @$input.attr('class', @$element.attr('class'))
-    @$input.attr('tabindex', @$element.attr('tabindex'))
-    @$element.removeAttr('tabindex')
-    if @$element.attr('disabled')?
-      @disable()
-
-  parseOption: (opt) ->
-    new Option opt.val(), opt.text(), opt.prop('selected') and opt.val() isnt ''
-
-  parseOptionGroup: (group) ->
-    options = (@parseOption $(child) for child in group.children('option'))
-    new OptionGroup group.attr('label'), options
-
-  parse: (element) ->
-    (if $(child).is 'option' then @parseOption $(child) else @parseOptionGroup $(child)) for child in element.children('option,optgroup')
-
-  traverseOptions: (items, callback) ->
-    for item in items
-      if item instanceof Option
-        callback item
-      else if item instanceof OptionGroup
-        callback option for option in item.options
-
-  setPlaceholder: (items) ->
-    @traverseOptions items, (option) =>
-      @options.placeholder = option.text if option.value is ''
-
   lookup: (event) ->
-    @query = @$input.val()
-    @process(@items)
+    @process(@options.source(@$input.val()))
 
   process: (items) ->
     ungrouped = @sorter (option for option in items when option instanceof Option and @matcher option.text)

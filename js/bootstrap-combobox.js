@@ -51,27 +51,21 @@ limitations under the License.
     Combobox.VERSION = 2.0;
 
     Combobox.DEFAULTS = {
-      template: '<div class="combobox-container"> <input type="hidden" /> <div class="input-group"> <input type="text" autocomplete="off" /> <span class="input-group-addon dropdown-toggle" data-dropdown="dropdown"> <span class="caret" /> <span class="glyphicon glyphicon-remove" /> </span> </div> </div>',
       menu: '<ul class="typeahead typeahead-long dropdown-menu"></ul>',
       item: '<li><a href="#"></a></li>'
     };
 
     function Combobox(element, options) {
       this.options = $.extend({}, Combobox.DEFAULTS, options);
-      this.$body = $(document.body);
       this.$element = $(element);
-      this.$container = this.createContainer(this.$element);
-      this.$input = this.$container.find('input[type=text]');
-      this.$hidden = this.$container.find('input[type=hidden]');
-      this.$button = this.$container.find('.dropdown-toggle');
-      this.$menu = $(this.options.menu).appendTo(this.$body);
+      this.$input = this.element.find('input[type=text]');
+      this.$button = this.element.find('[data-toggle="combobox"]');
+      this.$menu = $(this.options.menu).appendTo(this.$element);
       this.matcher = this.options.matcher || this.matcher;
       this.sorter = this.options.sorter || this.sorter;
       this.highlighter = this.options.highlighter || this.highlighter;
       this.shown = false;
       this.selected = false;
-      this.refresh();
-      this.transferAttributes();
       this.listen();
     }
 
@@ -131,18 +125,6 @@ limitations under the License.
       }
     };
 
-    Combobox.prototype.refresh = function() {
-      var e;
-      this.$container.trigger(e = $.Event('refresh.bs.combobox'));
-      if (e.isDefaultPrevented()) {
-        return;
-      }
-      this.items = this.parse(this.$element);
-      this.setPlaceholder(this.items);
-      this.select(this.items);
-      return this.$container.trigger(e = $.Event('refreshed.bs.combobox'));
-    };
-
     Combobox.prototype.select = function(arg) {
       var e;
       this.$container.trigger(e = $.Event('select.bs.combobox'));
@@ -153,8 +135,6 @@ limitations under the License.
         case !(arg instanceof Option):
           this.$container.addClass('combobox-selected');
           this.$input.val(arg.text).trigger('change');
-          this.$hidden.val(arg.value).trigger('change');
-          this.$element.val(arg.value).trigger('change');
           this.selected = true;
           this.$container.trigger(e = $.Event('selected.bs.combobox'));
           break;
@@ -187,99 +167,8 @@ limitations under the License.
       return this.$container.trigger(e = $.Event('cleared.bs.combobox'));
     };
 
-    Combobox.prototype.createContainer = function(element) {
-      var combobox;
-      combobox = $(this.options.template);
-      element.before(combobox);
-      element.hide();
-      return combobox;
-    };
-
-    Combobox.prototype.transferAttributes = function() {
-      this.options.placeholder = this.$element.attr('data-placeholder') || this.options.placeholder;
-      this.$input.attr('placeholder', this.options.placeholder);
-      this.$hidden.prop('name', this.$element.prop('name'));
-      this.$hidden.val(this.$element.val());
-      this.$element.removeAttr('name');
-      this.$input.attr('required', this.$element.attr('required'));
-      this.$input.attr('rel', this.$element.attr('rel'));
-      this.$input.attr('title', this.$element.attr('title'));
-      this.$input.attr('class', this.$element.attr('class'));
-      this.$input.attr('tabindex', this.$element.attr('tabindex'));
-      this.$element.removeAttr('tabindex');
-      if (this.$element.attr('disabled') != null) {
-        return this.disable();
-      }
-    };
-
-    Combobox.prototype.parseOption = function(opt) {
-      return new Option(opt.val(), opt.text(), opt.prop('selected') && opt.val() !== '');
-    };
-
-    Combobox.prototype.parseOptionGroup = function(group) {
-      var child, options;
-      options = (function() {
-        var _i, _len, _ref, _results;
-        _ref = group.children('option');
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          child = _ref[_i];
-          _results.push(this.parseOption($(child)));
-        }
-        return _results;
-      }).call(this);
-      return new OptionGroup(group.attr('label'), options);
-    };
-
-    Combobox.prototype.parse = function(element) {
-      var child, _i, _len, _ref, _results;
-      _ref = element.children('option,optgroup');
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        child = _ref[_i];
-        _results.push($(child).is('option') ? this.parseOption($(child)) : this.parseOptionGroup($(child)));
-      }
-      return _results;
-    };
-
-    Combobox.prototype.traverseOptions = function(items, callback) {
-      var item, option, _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = items.length; _i < _len; _i++) {
-        item = items[_i];
-        if (item instanceof Option) {
-          _results.push(callback(item));
-        } else if (item instanceof OptionGroup) {
-          _results.push((function() {
-            var _j, _len1, _ref, _results1;
-            _ref = item.options;
-            _results1 = [];
-            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-              option = _ref[_j];
-              _results1.push(callback(option));
-            }
-            return _results1;
-          })());
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
-    };
-
-    Combobox.prototype.setPlaceholder = function(items) {
-      return this.traverseOptions(items, (function(_this) {
-        return function(option) {
-          if (option.value === '') {
-            return _this.options.placeholder = option.text;
-          }
-        };
-      })(this));
-    };
-
     Combobox.prototype.lookup = function(event) {
-      this.query = this.$input.val();
-      return this.process(this.items);
+      return this.process(this.options.source(this.$input.val()));
     };
 
     Combobox.prototype.process = function(items) {
